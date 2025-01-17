@@ -12,16 +12,27 @@ import {
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { Button, Snackbar } from "react-native-paper";
 import axios from "axios";
+import CircularProgress from "@/components/common/CircularProgress";
 
 const Control = () => {
   const [apiConnectionStatus, setApiConnectionStatus] = useState(true);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [smartDevices, setSmartDevices] = useState([
-    { icon: "lightbulb", name: "Night Light", area: "Bed Room", power: false },
-    { icon: "wifi", name: "Wifi", area: "Office", power: false },
-    { icon: "television", name: "TV", area: "Home", power: false },
-    { icon: "snowflake", name: "AC", area: "Living Room", power: false },
+    {
+      icon: "water",
+      name: "Set water limit",
+      area: "for today",
+      power: false,
+    },
+    {
+      icon: "lightbulb",
+      name: "Remaining water",
+      area: "consumption",
+      power: false,
+    },
+    { icon: "water", name: "Drink", area: "achieve your target", power: false },
+    { icon: "snowflake", name: "10 Days", area: "streak", power: false },
   ]);
 
   const connectServer = async () => {
@@ -56,7 +67,7 @@ const Control = () => {
       <ScrollView>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerText}>ProHome</Text>
+          <Text style={styles.headerText}>SmartSleeve</Text>
           <TouchableOpacity style={styles.hamburger}>
             <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
@@ -92,7 +103,7 @@ const Control = () => {
                 fontWeight: "bold",
               }}
             >
-              {apiConnectionStatus ? "84.8 kWh" : "--.-- kWh"}
+              {apiConnectionStatus ? "300 ml" : "--.-- ml"}
             </Text>
             <Text style={{ color: "white", fontSize: 14 }}>
               {apiConnectionStatus
@@ -115,6 +126,25 @@ const Control = () => {
           numColumns={2}
           contentContainerStyle={styles.deviceList}
         />
+
+        <div style={styles.weekContainer}>
+          <div style={styles.weekDoneItem}>S</div>
+          <div style={styles.weekDoneItem}>M</div>
+          <div style={styles.weekDoneItem}>T</div>
+          <div style={styles.weekItem}>W</div>
+          <div style={styles.weekItem}>T</div>
+          <div style={styles.weekItem}>F</div>
+          <div style={styles.weekItem}>S</div>
+        </div>
+
+        <div style={styles.circularProgressContainer}>
+          <CircularProgress
+            size={120}
+            strokeWidth={12}
+            progress={75}
+            color="green"
+          />
+        </div>
       </ScrollView>
 
       {/* Snackbar */}
@@ -130,6 +160,41 @@ const Control = () => {
 };
 
 const styles = StyleSheet.create({
+  circularProgressContainer: {
+    display: "flex",
+    justifyContent: "center",
+    margin: 16,
+  },
+  weekContainer: {
+    backgroundColor: "#212121",
+    padding: 18,
+    margin: 16,
+    display: "flex",
+    justifyContent: "space-around",
+    borderRadius: 10,
+  },
+  weekDoneItem: {
+    textAlign: "center",
+    borderRadius: "100%",
+    backgroundColor: "green",
+    color: "white",
+    padding: 8,
+    height: 15,
+    width: 15,
+    // fontFamily: "",
+    fontFamily: "Arial, Helvetica, sans-serif",
+  },
+  weekItem: {
+    textAlign: "center",
+    borderRadius: "100%",
+    backgroundColor: "white",
+
+    padding: 8,
+    height: 15,
+    width: 15,
+    // fontFamily: "",
+    fontFamily: "Arial, Helvetica, sans-serif",
+  },
   container: {
     flex: 1,
     backgroundColor: "black",
@@ -188,7 +253,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   deviceArea: {
-    color: "white",
+    color: "grey",
     fontSize: 12,
   },
   hamburger: {
