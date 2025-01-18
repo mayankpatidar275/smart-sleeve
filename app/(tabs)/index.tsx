@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -9,9 +9,9 @@ import {
   StyleSheet,
   Switch,
 } from "react-native";
+import { BleManager } from "react-native-ble-plx";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { Button, Snackbar } from "react-native-paper";
-import axios from "axios";
 import CircularProgress from "@/components/common/CircularProgress";
 
 const Control = () => {
@@ -35,24 +35,58 @@ const Control = () => {
     { icon: "snowflake", name: "10 Days", area: "streak", power: false },
   ]);
 
-  const connectServer = async () => {
+  const [devices, setDevices] = useState([]);
+  const manager = new BleManager();
+
+  const connectToDevice = async (device: any) => {
     try {
       setSnackbarMessage("Connecting to server...");
       setSnackbarVisible(true);
-
-      const response = await axios.get(
-        "https://your-server-url.Ngrok-free.app"
+      await manager.connectToDevice(device.id);
+      const services =
+        await manager.discoverAllServicesAndCharacteristicsForDevice(device.id);
+      const characteristic = services.characteristics.find(
+        (c: any) => c.isReadable && c.uuid === "YOUR_CHARACTERISTIC_UUID"
       );
-      if (response.status === 200) {
+
+      if (characteristic) {
+        const data = await manager.readCharacteristicForDevice(
+          device.id,
+          characteristic.serviceUUID,
+          characteristic.uuid
+        );
+
+        // Process the data and display it on the screen
+        console.log(data);
         setSnackbarMessage("Server Connected");
         setApiConnectionStatus(true);
       }
     } catch (error) {
+      console.log(error);
       setSnackbarMessage("Failed to connect to server");
     } finally {
       setTimeout(() => setSnackbarVisible(false), 3000);
     }
   };
+
+  useEffect(() => {
+    const subscription = manager.onStateChange((state) => {
+      if (state === "PoweredOn") {
+        manager.startDeviceScan(null, null, (error, device) => {
+          if (error) {
+            console.log(error);
+            return;
+          }
+
+          if (device) {
+            setDevices((prevDevices) => [...prevDevices, device]);
+          }
+        });
+      }
+    }, true);
+
+    return () => subscription.remove();
+  }, []);
 
   const renderDevice = ({ item, index }) => (
     <View style={styles.deviceContainer}>
