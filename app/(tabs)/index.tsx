@@ -1,18 +1,17 @@
+import CircularProgress from "@/components/common/CircularProgress";
 import React, { useEffect, useState } from "react";
 import {
-  SafeAreaView,
-  ScrollView,
-  View,
-  Text,
   FlatList,
-  TouchableOpacity,
+  PermissionsAndroid,
+  Platform,
+  SafeAreaView,
   StyleSheet,
-  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { BleManager } from "react-native-ble-plx";
+import { Snackbar } from "react-native-paper";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { Button, Snackbar } from "react-native-paper";
-import CircularProgress from "@/components/common/CircularProgress";
 
 const Control = () => {
   const [apiConnectionStatus, setApiConnectionStatus] = useState(true);
@@ -35,57 +34,32 @@ const Control = () => {
     { icon: "snowflake", name: "10 Days", area: "streak", power: false },
   ]);
 
-  const [devices, setDevices] = useState([]);
-  const manager = new BleManager();
+  const requestPermissions = async () => {
+    if (Platform.OS === "android") {
+      try {
+        const granted = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        ]);
 
-  const connectToDevice = async (device: any) => {
-    try {
-      setSnackbarMessage("Connecting to server...");
-      setSnackbarVisible(true);
-      await manager.connectToDevice(device.id);
-      const services =
-        await manager.discoverAllServicesAndCharacteristicsForDevice(device.id);
-      const characteristic = services.characteristics.find(
-        (c: any) => c.isReadable && c.uuid === "YOUR_CHARACTERISTIC_UUID"
-      );
-
-      if (characteristic) {
-        const data = await manager.readCharacteristicForDevice(
-          device.id,
-          characteristic.serviceUUID,
-          characteristic.uuid
-        );
-
-        // Process the data and display it on the screen
-        console.log(data);
-        setSnackbarMessage("Server Connected");
-        setApiConnectionStatus(true);
+        if (
+          granted["android.permission.BLUETOOTH_CONNECT"] === "granted" &&
+          granted["android.permission.BLUETOOTH_SCAN"] === "granted" &&
+          granted["android.permission.ACCESS_FINE_LOCATION"] === "granted"
+        ) {
+          console.log("All permissions granted");
+        } else {
+          console.log("Permissions denied");
+        }
+      } catch (err) {
+        console.error("Failed to request permissions", err);
       }
-    } catch (error) {
-      console.log(error);
-      setSnackbarMessage("Failed to connect to server");
-    } finally {
-      setTimeout(() => setSnackbarVisible(false), 3000);
     }
   };
 
   useEffect(() => {
-    const subscription = manager.onStateChange((state) => {
-      if (state === "PoweredOn") {
-        manager.startDeviceScan(null, null, (error, device) => {
-          if (error) {
-            console.log(error);
-            return;
-          }
-
-          if (device) {
-            setDevices((prevDevices) => [...prevDevices, device]);
-          }
-        });
-      }
-    }, true);
-
-    return () => subscription.remove();
+    requestPermissions();
   }, []);
 
   const renderDevice = ({ item, index }) => (
@@ -98,7 +72,7 @@ const Control = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
+      <View>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerText}>SmartSleeve</Text>
@@ -161,25 +135,39 @@ const Control = () => {
           contentContainerStyle={styles.deviceList}
         />
 
-        <div style={styles.weekContainer}>
-          <div style={styles.weekDoneItem}>S</div>
-          <div style={styles.weekDoneItem}>M</div>
-          <div style={styles.weekDoneItem}>T</div>
-          <div style={styles.weekItem}>W</div>
-          <div style={styles.weekItem}>T</div>
-          <div style={styles.weekItem}>F</div>
-          <div style={styles.weekItem}>S</div>
-        </div>
+        <View style={styles.weekContainer}>
+          <View style={styles.weekDoneItem}>
+            <Text style={styles.weekDoneText}>S</Text>
+          </View>
+          <View style={styles.weekDoneItem}>
+            <Text style={styles.weekDoneText}>M</Text>
+          </View>
+          <View style={styles.weekDoneItem}>
+            <Text style={styles.weekDoneText}>T</Text>
+          </View>
+          <View style={styles.weekItem}>
+            <Text style={styles.weekText}>W</Text>
+          </View>
+          <View style={styles.weekItem}>
+            <Text style={styles.weekText}>T</Text>
+          </View>
+          <View style={styles.weekItem}>
+            <Text style={styles.weekText}>F</Text>
+          </View>
+          <View style={styles.weekItem}>
+            <Text style={styles.weekText}>S</Text>
+          </View>
+        </View>
 
-        <div style={styles.circularProgressContainer}>
+        <View style={styles.circularProgressContainer}>
           <CircularProgress
             size={120}
             strokeWidth={12}
             progress={75}
             color="green"
           />
-        </div>
-      </ScrollView>
+        </View>
+      </View>
 
       {/* Snackbar */}
       <Snackbar
@@ -197,6 +185,7 @@ const styles = StyleSheet.create({
   circularProgressContainer: {
     display: "flex",
     justifyContent: "center",
+    alignItems: "center",
     margin: 16,
   },
   weekContainer: {
@@ -204,30 +193,37 @@ const styles = StyleSheet.create({
     padding: 18,
     margin: 16,
     display: "flex",
+    flexDirection: "row",
     justifyContent: "space-around",
     borderRadius: 10,
   },
   weekDoneItem: {
-    textAlign: "center",
-    borderRadius: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 15, // Circle
     backgroundColor: "green",
-    color: "white",
     padding: 8,
-    height: 15,
-    width: 15,
-    // fontFamily: "",
-    fontFamily: "Arial, Helvetica, sans-serif",
+    height: 32,
+    width: 32,
+  },
+  weekDoneText: {
+    color: "white",
+    fontFamily: "Arial",
+    textAlign: "center",
   },
   weekItem: {
-    textAlign: "center",
-    borderRadius: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 15, // Circle
     backgroundColor: "white",
-
     padding: 8,
-    height: 15,
-    width: 15,
-    // fontFamily: "",
-    fontFamily: "Arial, Helvetica, sans-serif",
+    height: 32,
+    width: 32,
+  },
+  weekText: {
+    color: "black",
+    fontFamily: "Arial",
+    textAlign: "center",
   },
   container: {
     flex: 1,

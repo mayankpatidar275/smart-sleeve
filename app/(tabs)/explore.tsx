@@ -1,109 +1,261 @@
-import { StyleSheet, Image, Platform } from 'react-native';
+import {
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Snackbar } from "react-native-paper";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import React, { useEffect, useState } from "react";
+import { BleManager } from "react-native-ble-plx";
 
 export default function TabTwoScreen() {
+  const [devices, setDevices] = useState([]);
+  const [deviceConnStatus, setDeviceConnStatus] = useState(false);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+
+  const manager = new BleManager();
+
+  const connectToDevice = async (device: any) => {
+    try {
+      setSnackbarMessage("Connecting to device...");
+      setSnackbarVisible(true);
+      await manager.connectToDevice(device.id);
+      const services =
+        await manager.discoverAllServicesAndCharacteristicsForDevice(device.id);
+      const characteristic = services.characteristics.find(
+        (c: any) => c.isReadable && c.uuid === "YOUR_CHARACTERISTIC_UUID"
+      );
+
+      if (characteristic) {
+        const data = await manager.readCharacteristicForDevice(
+          device.id,
+          characteristic.serviceUUID,
+          characteristic.uuid
+        );
+
+        // Process the data and display it on the screen
+        console.log(data);
+        setSnackbarMessage("Server Connected");
+        setDeviceConnStatus(true);
+      }
+    } catch (error) {
+      console.log(error);
+      setSnackbarMessage("Failed to connect to server");
+    } finally {
+      setTimeout(() => setSnackbarVisible(false), 3000);
+    }
+  };
+
+  useEffect(() => {
+    const subscription = manager.onStateChange((state) => {
+      if (state === "PoweredOn") {
+        manager.startDeviceScan(null, null, (error, device) => {
+          if (error) {
+            console.log("Error scanning devices: ", error);
+            return;
+          }
+
+          if (device) {
+            setDevices((prevDevices) => [...prevDevices, device]);
+          }
+        });
+      }
+    }, true);
+
+    return () => subscription.remove();
+  }, []);
+  useEffect(() => {
+    console.log("devices scanned are: ");
+    console.log(devices);
+  }, [devices]);
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user's current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.container}>
+      <View>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerText}>SmartSleeve</Text>
+          <TouchableOpacity style={styles.hamburger}>
+            <Icon name="menu" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Connection Status */}
+        <View
+          style={[
+            styles.connectionStatus,
+            {
+              backgroundColor: deviceConnStatus
+                ? "rgba(0, 255, 0, 0.2)"
+                : "rgba(255, 0, 0, 0.2)",
+            },
+          ]}
+        >
+          <Icon
+            name="lightning-bolt"
+            size={60}
+            color={
+              deviceConnStatus ? "rgba(0, 255, 0, 0.8)" : "rgba(255, 0, 0, 0.8)"
+            }
+          />
+          <View>
+            <Text
+              style={{
+                color: deviceConnStatus
+                  ? "rgba(0, 255, 0, 0.8)"
+                  : "rgba(255, 0, 0, 0.8)",
+                fontSize: 25,
+                fontWeight: "bold",
+              }}
+            >
+              {deviceConnStatus ? "300 ml" : "--.-- ml"}
+            </Text>
+            <Text style={{ color: "white", fontSize: 14 }}>
+              {deviceConnStatus ? "Current Water Level" : "Device Disconnected"}
+            </Text>
+          </View>
+        </View>
+
+        {/* Available Devices */}
+        <View style={styles.linkedDevicesHeader}>
+          <Text style={styles.devicesTitle}>Available Devices</Text>
+          <Text style={styles.seeAll}>See All</Text>
+        </View>
+
+        <View>
+          {devices.map((device, index) => (
+            <View key={index}>
+              <View>
+                <Text> {device.name}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Snackbar */}
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+      >
+        {snackbarMessage}
+      </Snackbar>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  circularProgressContainer: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    margin: 16,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  weekContainer: {
+    backgroundColor: "#212121",
+    padding: 18,
+    margin: 16,
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-around",
+    borderRadius: 10,
+  },
+  weekDoneItem: {
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 15, // Circle
+    backgroundColor: "green",
+    padding: 8,
+    height: 32,
+    width: 32,
+  },
+  weekDoneText: {
+    color: "white",
+    fontFamily: "Arial",
+    textAlign: "center",
+  },
+  weekItem: {
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 15, // Circle
+    backgroundColor: "white",
+    padding: 8,
+    height: 32,
+    width: 32,
+  },
+  weekText: {
+    color: "black",
+    fontFamily: "Arial",
+    textAlign: "center",
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "black",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: 16,
+  },
+  headerText: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "white",
+  },
+  serverButton: {
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "gray",
+  },
+  connectionStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    margin: 16,
+    borderRadius: 10,
+  },
+  linkedDevicesHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+  },
+  devicesTitle: {
+    color: "white",
+    fontSize: 18,
+  },
+  seeAll: {
+    color: "gray",
+    fontSize: 16,
+  },
+  deviceList: {
+    padding: 10,
+  },
+  deviceContainer: {
+    flex: 1,
+    margin: 8,
+    backgroundColor: "#212121",
+    borderRadius: 10,
+    padding: 16,
+    alignItems: "center",
+  },
+  deviceName: {
+    color: "white",
+    marginTop: 8,
+  },
+  deviceArea: {
+    color: "grey",
+    fontSize: 12,
+  },
+  hamburger: {
+    backgroundColor: "#333",
+    padding: 10,
+    borderRadius: 25,
   },
 });

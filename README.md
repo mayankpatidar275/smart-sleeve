@@ -27,5 +27,17 @@ You can start developing by editing the files inside the **app** directory. This
 
 ## About
 
-Concept:
+Concepts and steps:
 1 - BLE device communication for Expo app
+2 - npx expo install expo-dev-client
+3 - eas setup (also create account from expo go app)
+4 - install eas cli
+5 - build the custom client
+
+6 - User guide to explain how product works
+7 - ask for required permissions like bluetooth
+
+8 - Search for nearby esp32 devices, display list
+9 - User select and connect to the device using its unique identifier (MAC address or UUID)
+10 - Save connection status for future auto connect
+11 - Use readCharacteristicForDevice or writeCharacteristicForDevice for communication.
