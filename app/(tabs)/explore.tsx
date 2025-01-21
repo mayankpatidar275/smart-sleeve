@@ -59,8 +59,8 @@ export default function TabTwoScreen() {
             return;
           }
 
-          if (device) {
-            setDevices((prevDevices) => [...prevDevices, device]);
+          if (device && !devices.includes(device.name)) {
+            setDevices((prevDevices) => [...prevDevices, device.name]);
           }
         });
       }
