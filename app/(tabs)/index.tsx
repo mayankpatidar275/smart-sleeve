@@ -13,7 +13,7 @@ import {
 import { Snackbar } from "react-native-paper";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
-const Control = () => {
+const App = () => {
   const [apiConnectionStatus, setApiConnectionStatus] = useState(true);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -293,4 +293,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Control;
+export default App;
