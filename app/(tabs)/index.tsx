@@ -123,7 +123,7 @@ const App = () => {
 
         {/* Linked Devices */}
         <View style={styles.linkedDevicesHeader}>
-          <Text style={styles.devicesTitle}>Linked Devices</Text>
+          <Text style={styles.devicesTitle}>Controls</Text>
           <Text style={styles.seeAll}>See All</Text>
         </View>
 
