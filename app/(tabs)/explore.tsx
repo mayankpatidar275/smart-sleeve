@@ -11,7 +11,7 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import React, { useEffect, useState } from "react";
 import { BleManager } from "react-native-ble-plx";
 
-export default function TabTwoScreen() {
+export default function DevicesScreen() {
   const [devices, setDevices] = useState([]);
   const [deviceConnStatus, setDeviceConnStatus] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
