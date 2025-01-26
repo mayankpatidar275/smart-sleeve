@@ -19,37 +19,6 @@ export default function DevicesScreen() {
 
   const manager = new BleManager();
 
-  const connectToDevice = async (device: any) => {
-    try {
-      setSnackbarMessage("Connecting to device...");
-      setSnackbarVisible(true);
-      await manager.connectToDevice(device.id);
-      const services =
-        await manager.discoverAllServicesAndCharacteristicsForDevice(device.id);
-      const characteristic = services.characteristics.find(
-        (c: any) => c.isReadable && c.uuid === "YOUR_CHARACTERISTIC_UUID"
-      );
-
-      if (characteristic) {
-        const data = await manager.readCharacteristicForDevice(
-          device.id,
-          characteristic.serviceUUID,
-          characteristic.uuid
-        );
-
-        // Process the data and display it on the screen
-        console.log(data);
-        setSnackbarMessage("Server Connected");
-        setDeviceConnStatus(true);
-      }
-    } catch (error) {
-      console.log(error);
-      setSnackbarMessage("Failed to connect to server");
-    } finally {
-      setTimeout(() => setSnackbarVisible(false), 3000);
-    }
-  };
-
   useEffect(() => {
     const subscription = manager.onStateChange((state) => {
       if (state === "PoweredOn") {
