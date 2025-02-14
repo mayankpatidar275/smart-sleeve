@@ -226,6 +226,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   container: {
+    marginTop: 40,
     flex: 1,
     backgroundColor: "black",
   },

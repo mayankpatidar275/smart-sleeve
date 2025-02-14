@@ -1,129 +1,178 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  Button,
-  FlatList,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
-import { BleManager } from "react-native-ble-plx";
+import { View, Text, Button, FlatList, TouchableOpacity } from "react-native";
+import { BleManager, Device, Characteristic } from "react-native-ble-plx";
 import { PermissionsAndroid, Platform } from "react-native";
 
-const manager = new BleManager();
-
-const App = () => {
-  const [devices, setDevices] = useState([]);
-  const [connectedDevice, setConnectedDevice] = useState(null);
-  const [scanning, setScanning] = useState(false);
-  const [receivedData, setReceivedData] = useState(null);
+const BluetoothManager: React.FC = () => {
+  const [bleManager] = useState(new BleManager());
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [connectedDevice, setConnectedDevice] = useState<Device | null>(null);
+  const [receivedData, setReceivedData] = useState<string>("data");
 
   useEffect(() => {
-    requestPermissions();
-  }, []);
-
-  const requestPermissions = async () => {
     if (Platform.OS === "android") {
-      await PermissionsAndroid.requestMultiple([
+      PermissionsAndroid.requestMultiple([
         PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
         PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
         PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      ]);
+      ]).then((result) => {
+        console.log("Permissions granted: ", result);
+      });
     }
-  };
+
+    return () => {
+      bleManager.destroy();
+    };
+  }, []);
 
   const scanDevices = () => {
-    setScanning(true);
     setDevices([]);
-    manager.startDeviceScan(null, null, (error, device) => {
+    bleManager.startDeviceScan(null, null, (error, device) => {
       if (error) {
-        Alert.alert("Error", error.message);
-        setScanning(false);
+        console.log("Scan error: ", error);
         return;
       }
-      if (device && device.name) {
-        setDevices((prevDevices) => {
-          if (!prevDevices.some((d) => d.id === device.id)) {
-            return [...prevDevices, device];
-          }
-          return prevDevices;
-        });
-      }
+      setDevices((prevDevices) => {
+        const deviceExists = prevDevices.some((d) => d.id === device?.id);
+        return device && !deviceExists ? [...prevDevices, device] : prevDevices;
+      });
     });
+
     setTimeout(() => {
-      manager.stopDeviceScan();
-      setScanning(false);
-    }, 5000);
+      bleManager.stopDeviceScan();
+    }, 10000);
   };
 
-  const connectToDevice = async (device) => {
+  const connectToDevice = async (device: Device) => {
     try {
-      const connectedDevice = await manager.connectToDevice(device.id);
-      await connectedDevice.discoverAllServicesAndCharacteristics();
-      setConnectedDevice(connectedDevice);
-      listenForData(connectedDevice);
+      const connected = await device.connect();
+      await connected.discoverAllServicesAndCharacteristics();
+      setConnectedDevice(connected);
+      console.log("Connected to: ", connected.name);
+      listenForData(connected);
     } catch (error) {
-      Alert.alert("Connection Error", error.message);
+      console.log("Connection error: ", error);
     }
   };
 
-  const listenForData = (device) => {
-    const serviceUUID = "your-service-uuid";
-    const characteristicUUID = "your-characteristic-uuid";
-
-    device.monitorCharacteristicForService(
-      serviceUUID,
-      characteristicUUID,
-      (error, characteristic) => {
-        if (error) {
-          Alert.alert("Read Error", error.message);
-          return;
-        }
-        if (characteristic?.value) {
-          setReceivedData(atob(characteristic.value));
+  const listenForData = async (device: Device) => {
+    const services = await device.services();
+    for (const service of services) {
+      const characteristics = await service.characteristics();
+      for (const characteristic of characteristics) {
+        if (characteristic.isNotifiable) {
+          characteristic.monitor((error, char) => {
+            if (error) {
+              console.log("Monitoring error: ", error);
+              return;
+            }
+            if (char?.value) {
+              const data = Buffer.from(char.value, "base64").toString("utf-8");
+              setReceivedData(data);
+            }
+          });
         }
       }
-    );
+    }
   };
 
   const disconnectDevice = async () => {
     if (connectedDevice) {
       await connectedDevice.cancelConnection();
       setConnectedDevice(null);
+      setReceivedData("");
     }
   };
 
   return (
-    <View style={{ flex: 1, padding: 20 }}>
-      <Button
-        title={scanning ? "Scanning..." : "Scan for Devices"}
-        onPress={scanDevices}
-        disabled={scanning}
-      />
-      {connectedDevice ? (
-        <View>
-          <Text>Connected to: {connectedDevice.name}</Text>
-          <Button title="Disconnect" onPress={disconnectDevice} />
-          <Text>Received Data: {receivedData || "No Data Yet"}</Text>
-        </View>
-      ) : (
+    <View style={{ flex: 1, padding: 20, marginTop: 40 }}>
+      <Text
+        style={{
+          textAlign: "center",
+          color: "white",
+          fontSize: 20,
+          marginBottom: 10,
+        }}
+      >
+        Available devices
+      </Text>
+
+      {devices.length ? (
         <FlatList
           data={devices}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => connectToDevice(item)}>
-              <Text>
-                {item.name} ({item.id})
+            <TouchableOpacity
+              onPress={() => connectToDevice(item)}
+              style={{
+                marginVertical: 5,
+                backgroundColor: "#333",
+                padding: 10,
+                borderRadius: 5,
+              }}
+            >
+              <Text style={{ textAlign: "center", color: "white" }}>
+                {item.name || "Unknown Device"}
               </Text>
             </TouchableOpacity>
           )}
         />
+      ) : (
+        <Text
+          style={{
+            textAlign: "center",
+            justifyContent: "center",
+            margin: "auto",
+            color: "white",
+            fontSize: 10,
+          }}
+        >
+          Scanning devices...
+        </Text>
       )}
+
+      {connectedDevice && (
+        <View>
+          <TouchableOpacity
+            onPress={disconnectDevice}
+            style={{
+              marginVertical: 5,
+              backgroundColor: "rgba(0, 255, 0, 0.2)",
+
+              padding: 10,
+              borderRadius: 5,
+            }}
+          >
+            <Text style={{ textAlign: "center", color: "white" }}>
+              {connectedDevice.name || "Unknown"}
+            </Text>
+            <Text style={{ textAlign: "center", color: "white" }}>
+              Received Data: {receivedData}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      <TouchableOpacity
+        onPress={scanDevices}
+        style={{
+          marginVertical: 5,
+          padding: 5,
+          margin: 5,
+          marginBottom: 10,
+          borderRadius: 5,
+          borderColor: "white",
+          borderWidth: 1,
+        }}
+      >
+        <Text style={{ textAlign: "center", color: "white", fontSize: 20 }}>
+          Scan devices
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
-export default App;
+export default BluetoothManager;
 
 // import React, { useEffect, useState } from "react";
 // import {
